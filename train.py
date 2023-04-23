@@ -1,62 +1,54 @@
 import torch
 import torch.nn as nn
-import json
+import torch.optim as optim
+import argparse
+import os
 from dataset import MyDataset
 from model import MyModel
 
-with open('config.json', 'r') as f:
+# Load config file
+with open("config.json", "r") as f:
     config = json.load(f)
 
-data_path = config['data_path']
-model_path = config['model_path']
-num_epochs = config['num_epochs']
-batch_size = config['batch_size']
-learning_rate = config['learning_rate']
-hidden_size = config['hidden_size']
-seq_length = config['seq_length']
-save_interval = config['save_interval']
+# Set random seed for reproducibility
+torch.manual_seed(42)
+
+# Initialize model and optimizer
+model = MyModel(config["hidden_size"], len(MyDataset.CHARACTERS))
+optimizer = optim.Adam(model.parameters(), lr=config["learning_rate"])
+criterion = nn.CrossEntropyLoss()
 
 # Load dataset
+data_path = config["data_path"]
+seq_length = config["seq_length"]
 dataset = MyDataset(data_path, seq_length)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=config["batch_size"], shuffle=True)
 
-# Define model
-vocab_size = len(dataset.char2idx)
-model = MyModel(vocab_size, hidden_size)
-
-# Train model
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = model.to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+# Train the model
 total_steps = 0
-hidden = None
-
-for epoch in range(num_epochs):
-    total_loss = 0
-    for i, data in enumerate(dataloader):
-        inputs = data[0].to(device)
-        targets = data[1].to(device)
-
+for epoch in range(config["num_epochs"]):
+    for i, (inputs, targets) in enumerate(dataloader):
+        # Zero the gradients
         optimizer.zero_grad()
-        outputs, hidden = model(inputs, hidden)
-        loss = criterion(outputs.view(-1, vocab_size), targets.view(-1))
+
+        # Forward pass
+        outputs = model(inputs)
+
+        # Compute loss
+        loss = criterion(outputs.view(-1, len(MyDataset.CHARACTERS)), targets.view(-1))
+
+        # Backward pass and optimization step
         loss.backward()
         optimizer.step()
-        total_loss += loss.item()
 
-        if (i+1) % 100 == 0:
-            print(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(dataloader)}], Loss: {total_loss/100:.4f}')
-            total_loss = 0
+        total_steps += 1
 
-        steps = (epoch+1)*len(dataset)
-        if total_steps % save_interval == 0:
-            torch.save(model.state_dict(), f'{model_path}/G_{steps}.pt')
-            print(f"Model saved at {model_path}/G_{steps}.pt")
+        # Save model at intervals
+        if total_steps % config["save_interval"] == 0:
+            torch.save(model.state_dict(), f"{config['model_path']}/G_{total_steps}")
+            print(f"Model saved at {config['model_path']}/G_{total_steps}")
 
-    #torch.save(model.state_dict(), f'{model_path}/model_{epoch+1}.pt')
-
-# Save final model
-steps = (epoch+1)*len(dataset)
-torch.save(model.state_dict(), f'{model_path}/G_{steps}.pt')
-print(f"Model saved at {model_path}/G_{steps}.pt")
+    # Save model after training on all files
+    if epoch == config["num_epochs"] - 1:
+        torch.save(model.state_dict(), f"{config['model_path']}/G_{total_steps}")
+        print(f"Model saved at {config['model_path']}/G_{total_steps}")
