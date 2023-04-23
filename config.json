@@ -4,7 +4,7 @@
     "num_epochs": 10,
     "batch_size": 64,
     "learning_rate": 0.001,
-    "hidden_size": 512,
+    "hidden_size": 768,
     "seq_length": 50,
     "save_interval": 1000
 }

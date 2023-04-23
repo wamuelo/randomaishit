@@ -8,9 +8,12 @@ class MyDataset(torch.utils.data.Dataset):
         self.seq_length = seq_length
         self.data = []
 
-        # Read data from all files in directory
-        for filename in os.listdir(data_path):
-            with open(os.path.join(data_path, filename), 'r') as f:
+        # Filter only .txt files
+        files = [os.path.join(data_path, file) for file in os.listdir(data_path) if file.endswith('.txt')]
+
+        # Read data from all .txt files
+        for file in files:
+            with open(file, 'r') as f:
                 text = f.read()
             self.data += [text[i:i+self.seq_length] for i in range(0, len(text)-self.seq_length, self.seq_length)]
 
