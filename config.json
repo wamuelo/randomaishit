@@ -1,6 +1,6 @@
 {
-    "data_path": "./data",
-    "model_path": "./model",
+    "data_path": "/content/data",
+    "model_path": "/content/model",
     "num_epochs": 10,
     "batch_size": 64,
     "learning_rate": 0.001,
