@@ -1,3 +1,4 @@
+import torch
 import os
 
 class MyDataset(torch.utils.data.Dataset):
